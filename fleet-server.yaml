@@ -1,0 +1,174 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: fleet-server
+    release: fleet-server
+  name: fleet-service
+  namespace: apm
+spec:
+  ports:
+  - name: http
+    port: 8200
+    protocol: TCP
+    targetPort: 8200
+  - name: fleet
+    port: 8220
+    protocol: TCP
+    targetPort: 8220
+  selector:
+    app: fleet-server
+    release: fleet-server
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fleet-server
+    release: fleet-server
+  name: fleet-server
+  namespace: apm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fleet-server
+      release: fleet-server
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: fleet-server
+        release: fleet-server
+    spec:
+      containers:
+      - env:
+        # - name: ELASTICSEARCH_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       key: username
+        #       name: elasticsearch-master-credentials
+        # - name: ELASTICSEARCH_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       key: password
+        #       name: elasticsearch-master-credentials
+        - name: FLEET_SERVER_ELASTICSEARCH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: elasticsearch-master-credentials
+        - name: FLEET_SERVER_ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: elasticsearch-master-credentials
+        - name: KIBANA_FLEET_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: elasticsearch-master-credentials
+        - name: KIBANA_FLEET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: elasticsearch-master-credentials
+        - name: FLEET_SERVER_ENABLE
+          value: "1"
+        - name: FLEET_SERVER_POLICY_ID
+          value: fleet-server-apm
+        # - name: ELASTICSEARCH_CA
+        #   value: /usr/share/fleet-server/config/certs/ca.crt
+        - name: FLEET_SERVER_ELASTICSEARCH_CA
+          value: /usr/share/fleet-server/config/certs/ca.crt
+        # - name: FLEET_SERVER_CERT_KEY
+        #   value: /usr/share/fleet-server/config/certs/tls.key
+        # - name: ELASTICSEARCH_HOST
+        #   value: https://elasticsearch-master:9200
+        - name: FLEET_SERVER_ELASTICSEARCH_HOST
+          value: https://elasticsearch-master:9200
+        - name: FLEET_URL
+          value: http://fleet-service:8220
+        - name: KIBANA_FLEET_SETUP
+          value: "true"
+        - name: KIBANA_FLEET_HOST
+          value: http://kibana-kibana:5601
+        - name: FLEET_SERVER_INSECURE_HTTP
+          value: "true"
+        # - name: FLEET_SERVER_SERVICE_TOKEN
+        #   value: AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3MjI0Nzk3OTM0NTc6dE0yMF8zUWlSNy1fTHU2empoeko4Zw
+        image: docker.elastic.co/beats/elastic-agent:7.17.9
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/status
+            port: fleet
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: fleet-server
+        ports:
+        - containerPort: 8200
+          name: http
+          protocol: TCP
+        - containerPort: 8220
+          name: fleet
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /api/status
+            port: fleet
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 600m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          privileged: false
+          runAsGroup: 0
+          runAsNonRoot: true
+          runAsUser: 1000
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /usr/share/fleet-server/config/certs
+          name: elastic-certificate-pem
+        # - mountPath: /usr/share/fleet-server/fleet-server.yml
+        #   name: fleet-server-config
+        #   readOnly: true
+        #   subPath: fleet-server.yml
+      restartPolicy: Always
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 0
+        runAsUser: 1000
+      serviceAccount: fleet-server
+      serviceAccountName: fleet-server
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: elastic-certificate-pem
+        secret:
+          defaultMode: 420
+          secretName: elasticsearch-master-certs
+      # - name: fleet-server-config
+      #   configMap:
+      #     defaultMode: 384
+      #     name: fleet-server-fleet-server-config

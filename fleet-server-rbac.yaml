@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fleet-server
+  namespace: apm
+  labels:
+    app: fleet-server
+    release: fleet-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fleet-server-cluster-role
+  labels:
+    app: fleet-server
+    release: fleet-server
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources:
+  - pods
+  - nodes
+  - namespaces
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fleet-server-cluster-role-binding
+  labels:
+    app: fleet-server
+    release: fleet-server
+roleRef:
+  kind: ClusterRole
+  name: fleet-server-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: fleet-server
+  namespace: apm
