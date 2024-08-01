@@ -50,16 +50,6 @@ spec:
     spec:
       containers:
       - env:
-        # - name: ELASTICSEARCH_USERNAME
-        #   valueFrom:
-        #     secretKeyRef:
-        #       key: username
-        #       name: elasticsearch-master-credentials
-        # - name: ELASTICSEARCH_PASSWORD
-        #   valueFrom:
-        #     secretKeyRef:
-        #       key: password
-        #       name: elasticsearch-master-credentials
         - name: FLEET_SERVER_ELASTICSEARCH_USERNAME
           valueFrom:
             secretKeyRef:
@@ -84,14 +74,8 @@ spec:
           value: "1"
         - name: FLEET_SERVER_POLICY_ID
           value: fleet-server-apm
-        # - name: ELASTICSEARCH_CA
-        #   value: /usr/share/fleet-server/config/certs/ca.crt
         - name: FLEET_SERVER_ELASTICSEARCH_CA
           value: /usr/share/fleet-server/config/certs/ca.crt
-        # - name: FLEET_SERVER_CERT_KEY
-        #   value: /usr/share/fleet-server/config/certs/tls.key
-        # - name: ELASTICSEARCH_HOST
-        #   value: https://elasticsearch-master:9200
         - name: FLEET_SERVER_ELASTICSEARCH_HOST
           value: https://elasticsearch-master:9200
         - name: FLEET_URL
@@ -102,8 +86,6 @@ spec:
           value: http://kibana-kibana:5601
         - name: FLEET_SERVER_INSECURE_HTTP
           value: "true"
-        # - name: FLEET_SERVER_SERVICE_TOKEN
-        #   value: AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3MjI0Nzk3OTM0NTc6dE0yMF8zUWlSNy1fTHU2empoeko4Zw
         image: docker.elastic.co/beats/elastic-agent:7.17.9
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -151,10 +133,6 @@ spec:
         volumeMounts:
         - mountPath: /usr/share/fleet-server/config/certs
           name: elastic-certificate-pem
-        # - mountPath: /usr/share/fleet-server/fleet-server.yml
-        #   name: fleet-server-config
-        #   readOnly: true
-        #   subPath: fleet-server.yml
       restartPolicy: Always
       securityContext:
         fsGroup: 1000
@@ -168,7 +146,3 @@ spec:
         secret:
           defaultMode: 420
           secretName: elasticsearch-master-certs
-      # - name: fleet-server-config
-      #   configMap:
-      #     defaultMode: 384
-      #     name: fleet-server-fleet-server-config
